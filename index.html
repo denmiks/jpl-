@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Our Photo Folders</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Nunito:wght@400;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="cat" viewBox="0 0 100 100"><g class="ln"><path d="M68 90 Q96 88 90 60"/><path class="f" d="M32 62 Q24 92 40 94 H62 Q76 92 68 62 Z"/><path class="f" d="M27 42 L24 13 L46 28 Z"/><path class="f" d="M73 42 L76 13 L54 28 Z"/><ellipse class="f" cx="50" cy="44" rx="24" ry="20"/><circle cx="41" cy="42" r="2.5"/><circle cx="59" cy="42" r="2.5"/><path class="nose" d="M47 49 L53 49 L50 52 Z"/><path d="M50 52 Q46 57 42 54 M50 52 Q54 57 58 54"/><path d="M30 50 L14 46 M30 54 L14 56 M70 50 L86 46 M70 54 L86 56"/></g></symbol>
+<symbol id="dog" viewBox="0 0 100 100"><g class="ln"><path d="M66 88 Q92 86 86 62"/><path class="f" d="M33 64 Q26 94 40 94 H62 Q76 94 67 64 Z"/><path class="f" d="M32 32 Q10 32 16 66 Q32 64 36 46 Z"/><path class="f" d="M68 32 Q90 32 84 66 Q68 64 64 46 Z"/><ellipse class="f" cx="50" cy="44" rx="22" ry="20"/><circle cx="41" cy="40" r="2.5"/><circle cx="59" cy="40" r="2.5"/><ellipse class="f" cx="50" cy="54" rx="9" ry="7"/><ellipse class="nose" cx="50" cy="51" rx="3.5" ry="2.5"/><path d="M50 54 V58 M45 60 Q50 64 55 60"/><path class="f" d="M48 62 Q50 70 53 62"/></g></symbol>
+</defs></svg>
+<svg class="pet corner l" aria-hidden="true"><use href="#dog"/></svg><svg class="pet corner r" aria-hidden="true"><use href="#cat"/></svg>
+<main>
+<section id="home">
+  <div class="hero"><svg class="pet" aria-hidden="true"><use href="#cat"/></svg><h1>Our Photo Folders</h1><svg class="pet" aria-hidden="true"><use href="#dog"/></svg></div>
+  <p class="sub">Every entry gets its own folder. Add a title and photos to make one.</p>
+  <div class="add"><button class="btn go" id="gobooth">Open photobooth</button></div>
+  <div class="add">
+    <input type="text" id="fname" placeholder="Entry title (e.g. Baguio trip)" maxlength="30" aria-label="Entry title">
+    <input type="date" id="fdate" aria-label="Entry date">
+    <input type="file" id="ffile" accept="image/*" multiple hidden>
+    <button class="btn" id="fpick">Choose photos</button>
+    <button class="btn go" id="mk">Create folder</button>
+    <div class="hint" id="fhint" aria-live="polite"></div>
+  </div>
+  <div class="tabs show" id="htabs" role="group" aria-label="Group folders">
+    <button data-h="all" aria-pressed="true">All</button><button data-h="week" aria-pressed="false">Weekly</button><button data-h="month" aria-pressed="false">Monthly</button><button data-h="year" aria-pressed="false">Yearly</button>
+  </div>
+  <div id="folders"></div>
+</section>
+
+<section id="booth" hidden>
+  <div class="back-row"><button class="btn" id="bback">← All folders</button></div>
+  <div class="hero"><svg class="pet" aria-hidden="true"><use href="#dog"/></svg><h1>Photobooth</h1><svg class="pet" aria-hidden="true"><use href="#cat"/></svg></div>
+  <p class="sub">Take 4 shots, pick a frame color, add stickers, then download your strip.</p>
+  <div class="bwrap">
+    <div class="bl">
+      <div class="cam" id="cam"><video id="vid" autoplay playsinline muted></video><div class="camoff" id="camoff">Camera is off</div><div class="cd" id="cd" aria-live="assertive"></div></div>
+      <div class="add">
+        <button class="btn" id="bcam">Start camera</button>
+        <button class="btn go" id="btake">Take 4 shots</button>
+        <button class="btn" id="bup">Upload photos</button>
+        <input type="file" id="bfile" accept="image/*" multiple hidden>
+        <button class="btn" id="bclr">Clear</button>
+      </div>
+      <div class="slots" id="slots"></div>
+      <div class="hint" id="bhint" aria-live="polite"></div>
+    </div>
+    <div class="bright">
+      <div class="swatches" id="sw" role="group" aria-label="Frame color"></div>
+      <div class="add"><input type="text" id="bcap" placeholder="Caption (e.g. Us, Friday)" maxlength="24" aria-label="Caption"></div>
+      <div class="stk" id="stk" role="group" aria-label="Stickers"></div>
+      <canvas id="strip" role="img" aria-label="Your photo strip"></canvas>
+      <div class="add"><button class="btn" id="undo">Undo sticker</button><button class="btn go" id="dl">Download strip</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="detail" hidden>
+  <div class="back-row"><button class="btn" id="back">← All folders</button></div>
+  <h1 id="ftitle"></h1>
+  <p class="sub">Add a photo, give it a title, then open the folder.</p>
+  <div class="add">
+    <input type="text" id="title" placeholder="Photo title (e.g. Sunset)" maxlength="40" aria-label="Photo title">
+    <input type="date" id="date" aria-label="Photo date">
+    <input type="file" id="file" accept="image/*" multiple hidden>
+    <button class="btn" id="pick">Choose photos</button>
+    <button class="btn go" id="save">Add to folder</button>
+    <div class="hint" id="hint" aria-live="polite"></div>
+  </div>
+  <div class="stage"><svg class="pet side" aria-hidden="true"><use href="#cat"/></svg>
+    <button class="folder" id="folder" aria-expanded="false" aria-label="Open folder">
+      <div class="back"></div>
+      <div class="sheets"><i></i><i></i><i></i></div>
+      <div class="front"><b id="bigname"></b><span id="count">0 photos</span></div>
+    </button><svg class="pet side" aria-hidden="true"><use href="#dog"/></svg>
+  </div>
+  <div class="tabs" id="tabs" role="group" aria-label="Compilation">
+    <button data-m="week" aria-pressed="true">Weekly</button>
+    <button data-m="month" aria-pressed="false">Monthly</button>
+    <button data-m="year" aria-pressed="false">Yearly</button>
+  </div>
+  <div class="board" id="board"></div>
+</section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
