@@ -30,11 +30,12 @@ function keyOf(date,m){const d=D(date);
  const e=new Date(s);e.setDate(s.getDate()+6);
  return[+s,fmt(s,{month:'short',day:'numeric'})+' – '+fmt(e,{month:'short',day:'numeric',year:'numeric'})]}
 
+const PETS=['cat','cat2','cat3','dog','dog2','dog3','dog4'];
 /* home */
 const card=f=>{const ps=photos.filter(p=>p.fid===f.id),last=ps[ps.length-1];
- return `<div class="fw"><button class="folder mini" data-id="${f.id}" aria-label="Open folder ${esc(f.name)}"><div class="back"></div><svg class="pet" aria-hidden="true"><use href="#${hash(f.id)%2?'dog':'cat'}"/></svg><div class="sheets"><i></i><i></i><i style="${last?`background:url(${last.src}) center/cover`:''}"></i></div><div class="front"><b>${esc(f.name)}</b><span>${plural(ps.length)}</span></div></button><button class="rm" data-rm="${f.id}">Delete folder</button></div>`};
+ return `<div class="fw"><button class="folder mini" data-id="${f.id}" aria-label="Open folder ${esc(f.name)}"><div class="back"></div><svg class="pet" aria-hidden="true"><use href="#${PETS[Math.abs(hash(f.id))%PETS.length]}"/></svg><div class="sheets"><i></i><i></i><i style="${last?`background:url(${last.src}) center/cover`:''}"></i></div><div class="front"><b>${esc(f.name)}</b><span>${plural(ps.length)}</span></div></button><button class="rm" data-rm="${f.id}">Delete folder</button></div>`};
 function renderHome(){
- if(!folders.length){$('folders').innerHTML='<p class="empty">No folders yet. Add a title and photos above.</p>';return}
+ if(!folders.length){$('folders').innerHTML='<p class="empty">No folders yet. Press Upload photos to make one.</p>';return}
  const g={};folders.forEach(f=>{const[k,l]=hm==='all'?[0,'']:keyOf(f.date,hm);(g[k]=g[k]||{l,a:[]}).a.push(f)});
  $('folders').innerHTML=Object.keys(g).sort((a,b)=>b-a).map(k=>{const x=g[k];
   return `<section class="group">${x.l?`<h2>${esc(x.l)}<small>${x.a.length} folder${x.a.length>1?'s':''}</small></h2>`:''}<div class="folders">${x.a.sort((a,b)=>b.created-a.created).map(card).join('')}</div></section>`}).join('')}
@@ -60,12 +61,12 @@ $('folders').onclick=e=>{
 /* navigation */
 function show(id){
  cur=id;const f=folders.find(x=>x.id===id);
- $('home').hidden=true;$('detail').hidden=false;
+ $('home').hidden=true;$('upload').hidden=true;$('booth').hidden=true;$('detail').hidden=false;markNav('gallery');
  $('ftitle').textContent=f.name;$('bigname').textContent=f.name;$('hint').textContent='';
  isOpen=false;$('folder').classList.remove('open');$('tabs').classList.remove('show');$('board').classList.remove('show');
  render();window.scrollTo(0,0);
  if(inCur().length)setTimeout(()=>{if(cur===id&&!isOpen)setOpen(true)},500)}
-$('back').onclick=()=>{cur=null;isOpen=false;$('detail').hidden=true;$('home').hidden=false;renderHome();window.scrollTo(0,0)};
+$('back').onclick=()=>{cur=null;isOpen=false;setView('gallery')};
 
 /* adding photos to an open folder */
 $('pick').onclick=()=>$('file').click();
@@ -154,15 +155,31 @@ $('bfile').onchange=async e=>{const fs=[...e.target.files].slice(0,4);let k=0;
  $('bfile').value='';$('bhint').textContent=k?k+' photo'+(k>1?'s':'')+' added.'+(k<4?' Retake the empty slots with the camera, or upload 4 photos.':''):'Those files could not be read as images.'};
 $('bclr').onclick=()=>{stickers=[];shots=[null,null,null,null];imgs=[null,null,null,null];renderSlots();drawStrip();$('bhint').textContent=''};
 $('bcap').oninput=drawStrip;
+function stripName(){const c=$('bcap').value.trim().replace(/[^\w\- ]+/g,'').replace(/\s+/g,'-');
+ return 'JPL-Folder-'+(c||'photobooth-strip')+'-'+today()+'.png'}
 $('dl').onclick=async()=>{
  if(!shots.some(Boolean)){$('bhint').textContent='Take or upload at least one photo first.';return}
- const dn=window.claude&&await window.claude.use('downloads');
- if(!dn){$('bhint').textContent='Saving is not available here. Press and hold (or right-click) the strip to save it.';return}
  const blob=await new Promise(r=>$('strip').toBlob(r,'image/png'));
- try{await dn.save({filename:'photobooth-strip.png',data:blob});$('bhint').textContent='Saved.'}
- catch(e){if(!e||e.code!=='declined')$('bhint').textContent='Could not save the strip. Try again.'}};
-$('gobooth').onclick=()=>{$('home').hidden=true;$('booth').hidden=false;window.scrollTo(0,0);drawStrip()};
-$('bback').onclick=()=>{stopCam();$('booth').hidden=true;$('home').hidden=false;renderHome();window.scrollTo(0,0)};
+ if(!blob){$('bhint').textContent='Could not build the strip. Try again.';return}
+ const dn=window.claude&&await window.claude.use('downloads').catch(()=>null);
+ if(dn){try{await dn.save({filename:stripName(),data:blob});$('bhint').textContent='Saved.';return}
+  catch(e){if(!e||e.code!=='declined'){}}}
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=stripName();document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),4000);
+ $('bhint').textContent='Downloaded '+stripName();};
+/* section nav */
+function setView(v){
+ $('home').hidden=v!=='gallery';$('upload').hidden=v!=='upload';$('booth').hidden=v!=='booth';
+ if(!$('detail').hidden){cur=null;isOpen=false;$('detail').hidden=true}
+ if(v!=='booth')stopCam();
+ if(v==='gallery')renderHome();
+ if(v==='booth')drawStrip();
+ markNav(v);window.scrollTo(0,0)}
+function markNav(v){document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v))}
+$('nav').onclick=e=>{const b=e.target.closest('button');if(b)setView(b.dataset.v)};
+$('goup').onclick=()=>setView('upload');
+document.querySelector('.brand').onclick=e=>{e.preventDefault();setView('gallery')};
 /* stickers + shutter sound */
 const STK=['🐱','🐶','🐾','❤️','⭐','🎀','🌸','✨'];
 function renderStk(){$('stk').innerHTML=STK.map(e=>`<button class="sw stk1" data-e="${e}" aria-pressed="${e===pickSt}" aria-label="Sticker ${e}">${e}</button>`).join('')}

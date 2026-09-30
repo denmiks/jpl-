@@ -19,9 +19,17 @@ button{font:inherit;cursor:pointer}
 button:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
 .hint{width:100%;text-align:center;color:var(--muted);font-size:.9rem;min-height:1.2em}
 .back-row{margin-bottom:10px}
+/* header */
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1000px;margin:0 auto;padding:12px 18px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1.5px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px;font-family:Caveat,cursive;font-size:1.7rem;font-weight:700;color:var(--ink);text-decoration:none;line-height:1}
+.brand .pet{width:34px;height:34px}
+#nav{display:flex;gap:6px}
+#nav button{padding:8px 16px;border-radius:99px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);font-weight:700}
+#nav button[aria-pressed=true]{background:var(--fa);border-color:var(--fa);color:#fff}
 /* pets */
 .ln{stroke:var(--ink);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .ln .f{fill:var(--bg)}.ln circle,.ln .nose{fill:var(--ink);stroke:none}
+.ln .w{fill:var(--paper);stroke-width:2.5}
 .pet{width:70px;height:70px;flex:none;overflow:visible}
 .hero{display:flex;align-items:center;justify-content:center;gap:14px}
 .hero .pet{width:clamp(48px,14vw,92px);height:clamp(48px,14vw,92px)}
