@@ -7,17 +7,50 @@ const plural=n=>n+' photo'+(n===1?'':'s');
 const inCur=()=>photos.filter(p=>p.fid===cur);
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7);
+const say=m=>{const s=$('status');if(s)s.textContent=m||''};
 
-/* storage: IndexedDB with in-memory fallback */
+/* storage: shared Supabase when configured, IndexedDB as the offline fallback */
+const SB={url:'PASTE_SUPABASE_URL',key:'PASTE_SUPABASE_ANON_KEY',bucket:'photos'};
+const sb=(SB.url.startsWith('PASTE')||typeof supabase==='undefined')?null:supabase.createClient(SB.url,SB.key);
+const sbAll=async t=>{const r=await sb.from(t).select('*');if(r.error)throw r.error;return r.data||[]};
+const sbDel=(t,id)=>sb.from(t).delete().eq('id',id);
+const sbRm=paths=>sb.storage.from(SB.bucket).remove(paths).then(()=>{});
+const objURL=p=>sb.storage.from(SB.bucket).getPublicUrl(p).data.publicUrl;
+
+async function saveFolder(f){
+ if(sb){const e=await sb.from('folders').insert(f);if(e.error)throw e.error}
+ else dbPut('f',f);
+ return f}
+async function dropFolder(f){
+ const mine=photos.filter(p=>p.fid===f.id);
+ await Promise.all(mine.map(p=>dropPhoto(p)));
+ if(sb){const e=await sbDel('folders',f.id);if(e.error)throw e.error}else dbDel('f',f.id)}
+async function savePhoto(p,blob){
+ if(sb){const path=p.fid+'/'+p.id+'.jpg';
+  const up=await sb.storage.from(SB.bucket).upload(path,blob,{contentType:'image/jpeg',upsert:true});
+  if(up.error)throw up.error;
+  const e=await sb.from('photos').insert({id:p.id,fid:p.fid,title:p.title,date:p.date,created:p.created||0,path});
+  if(e.error)throw e.error;p.path=path;p.src=objURL(path)}
+ else{p.src=await blobURL(blob);dbPut('p',p)}
+ return p}
+async function dropPhoto(p){
+ if(sb){await sbRm(p.path||p.fid+'/'+p.id+'.jpg');await sbDel('photos',p.id)}
+ else dbDel('p',p.id)}
+
+/* IndexedDB fallback */
 function openDB(){return new Promise(res=>{try{const r=indexedDB.open('photo-folder',2);
  r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('p'))d.createObjectStore('p',{keyPath:'id'});if(!d.objectStoreNames.contains('f'))d.createObjectStore('f',{keyPath:'id'})};
  r.onsuccess=()=>{db=r.result;res()};r.onerror=()=>res()}catch(e){res()}})}
 const dbAll=s=>new Promise(res=>{if(!db)return res([]);try{const q=db.transaction(s).objectStore(s).getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res([])}catch(e){res([])}});
 const dbPut=(s,o)=>{try{db&&db.transaction(s,'readwrite').objectStore(s).put(o)}catch(e){}};
 const dbDel=(s,id)=>{try{db&&db.transaction(s,'readwrite').objectStore(s).delete(id)}catch(e){}};
+const blobURL=b=>new Promise(r=>{if(!b)return r(null);const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(b)});
+
+/* resize to a shareable jpeg blob */
 function shrink(file){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
- const s=Math.min(1,640/Math.max(im.width,im.height));const c=document.createElement('canvas');
- c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))};
+  const s=Math.min(1,1200/Math.max(im.width,im.height));const c=document.createElement('canvas');
+  c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+  c.toBlob?c.toBlob(b=>res(b),'image/jpeg',.85):res(null)};
  im.onerror=()=>res(null);im.src=fr.result};fr.onerror=()=>res(null);fr.readAsDataURL(file)})}
 
 /* dates */
@@ -35,7 +68,7 @@ const PETS=['cat','cat2','cat3','dog','dog2','dog3','dog4'];
 const card=f=>{const ps=photos.filter(p=>p.fid===f.id),last=ps[ps.length-1];
  return `<div class="fw"><button class="folder mini" data-id="${f.id}" aria-label="Open folder ${esc(f.name)}"><div class="back"></div><svg class="pet" aria-hidden="true"><use href="#${PETS[Math.abs(hash(f.id))%PETS.length]}"/></svg><div class="sheets"><i></i><i></i><i style="${last?`background:url(${last.src}) center/cover`:''}"></i></div><div class="front"><b>${esc(f.name)}</b><span>${plural(ps.length)}</span></div></button><button class="rm" data-rm="${f.id}">Delete folder</button></div>`};
 function renderHome(){
- if(!folders.length){$('folders').innerHTML='<p class="empty">No folders yet. Press Upload photos to make one.</p>';return}
+ if(!folders.length){$('folders').innerHTML='<p class="empty">No folders yet. Open the Upload tab to make one.</p>';return}
  const g={};folders.forEach(f=>{const[k,l]=hm==='all'?[0,'']:keyOf(f.date,hm);(g[k]=g[k]||{l,a:[]}).a.push(f)});
  $('folders').innerHTML=Object.keys(g).sort((a,b)=>b-a).map(k=>{const x=g[k];
   return `<section class="group">${x.l?`<h2>${esc(x.l)}<small>${x.a.length} folder${x.a.length>1?'s':''}</small></h2>`:''}<div class="folders">${x.a.sort((a,b)=>b.created-a.created).map(card).join('')}</div></section>`}).join('');fillPick()}
@@ -49,16 +82,24 @@ $('ffile').onchange=e=>{fpend=[...e.target.files];$('fhint').textContent=fpend.l
 $('mk').onclick=async()=>{const n=$('fname').value.trim();
  if(!n){$('fhint').textContent='Type a title for this entry first.';return}
  if(!fpend.length){$('fhint').textContent='Choose at least one photo first.';return}
- const d=$('fdate').value||today(),f={id:uid(),name:n,date:d,created:Date.now()};let c=0;
- for(const file of fpend){const src=await shrink(file);if(!src)continue;const p={id:uid(),fid:f.id,title:n,date:d,src};photos.push(p);dbPut('p',p);c++}
- if(!c){$('fhint').textContent='Those files could not be read as images.';return}
- folders.push(f);dbPut('f',f);fpend=[];$('ffile').value='';$('fname').value='';$('fhint').textContent='';show(f.id)};
+ const d=$('fdate').value||today(),f={id:uid(),name:n,date:d,created:Date.now()};
+ const made=[];let bad=null;
+ for(const file of fpend){const blob=await shrink(file);if(!blob)continue;
+  const p={id:uid(),fid:f.id,title:n,date:d,created:Date.now()};
+  try{photos.push(await savePhoto(p,blob));made.push(p);}catch(e){bad=e}}
+ if(!made.length){$('fhint').textContent=bad?'Upload failed: '+bad.message:'Those files could not be read as images.';return}
+ folders.push(f);
+ try{await saveFolder(f)}
+ catch(e){await Promise.all(made.map(p=>dropPhoto(p)));photos=photos.filter(p=>p.fid!==f.id);
+  $('fhint').textContent='Could not create the folder: '+e.message;return}
+ fpend=[];$('ffile').value='';$('fname').value='';$('fhint').textContent='';renderHome();show(f.id)};
 $('fname').onkeydown=e=>{if(e.key==='Enter')$('mk').click()};
-$('folders').onclick=e=>{
+$('folders').onclick=async e=>{
  const r=e.target.closest('.rm');
  if(r){if(!r.classList.contains('arm')){r.classList.add('arm');r.textContent='Tap again to delete';setTimeout(()=>{r.classList.remove('arm');r.textContent='Delete folder'},3000);return}
-  const id=r.dataset.rm;photos.filter(p=>p.fid===id).forEach(p=>dbDel('p',p.id));photos=photos.filter(p=>p.fid!==id);
-  folders=folders.filter(f=>f.id!==id);dbDel('f',id);renderHome();return}
+  const id=r.dataset.rm,f=folders.find(x=>x.id===id);
+  await dropFolder(f);photos=photos.filter(p=>p.fid!==id);folders=folders.filter(x=>x.id!==id);
+  if(cur===id)closeFolder();renderHome();return}
  const b=e.target.closest('.folder');if(b)show(b.dataset.id)};
 
 /* opening a folder inside the gallery */
@@ -83,11 +124,12 @@ $('padd').onclick=async()=>{
  const fid=$('pfid').value;
  if(!fid){$('phint').textContent='Pick a folder to add to first.';return}
  if(!pending.length){$('phint').textContent='Choose at least one photo first.';return}
- const t=$('ptitle').value.trim(),d=$('pdate').value||today();let n=0;
- for(const f of pending){const src=await shrink(f);if(!src)continue;
-  const p={id:uid(),fid,title:t||f.name.replace(/\.[^.]+$/,''),date:d,src};photos.push(p);dbPut('p',p);n++}
+ const t=$('ptitle').value.trim(),d=$('pdate').value||today();let n=0,bad=null;
+ for(const f of pending){const blob=await shrink(f);if(!blob)continue;
+  const p={id:uid(),fid,title:t||f.name.replace(/\.[^.]+$/,''),date:d,created:Date.now()};
+  try{photos.push(await savePhoto(p,blob));n++}catch(e){bad=e}}
  pending=[];$('pfile').value='';$('ptitle').value='';
- $('phint').textContent=n?n+' added.':'Those files could not be read as images.';
+ $('phint').textContent=bad?'Uploaded '+n+', then failed: '+bad.message:n?n+' added.':'Those files could not be read as images.';
  if(cur===fid)update();
  renderHome();fillPick()};
 
@@ -119,9 +161,11 @@ function setOpen(v){
 $('folder').onclick=()=>setOpen(!isOpen);
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
  mode=b.dataset.m;document.querySelectorAll('#tabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));update()});
-$('board').onclick=e=>{const b=e.target.closest('.del');if(!b)return;
- photos=photos.filter(p=>p.id!==b.dataset.id);dbDel('p',b.dataset.id);
- if(!inCur().length)setOpen(false);else update();$('count').textContent=plural(inCur().length)};
+$('board').onclick=async e=>{const b=e.target.closest('.del');if(!b)return;
+ const p=photos.find(x=>x.id===b.dataset.id);
+ try{await dropPhoto(p)}catch(err){}
+ photos=photos.filter(x=>x.id!==b.dataset.id);
+ if(!inCur().length)setOpen(false);else update();$('count').textContent=plural(inCur().length);renderHome()};
 
 /* photobooth */
 const COLORS=['#ffffff','#1e1e1e','#f4a7b9','#ffd166','#7ac7a0','#8ecae6','#b79ced','#e0653d'];
@@ -189,7 +233,6 @@ function setView(v){
  markNav(v);window.scrollTo(0,0)}
 function markNav(v){document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v))}
 $('nav').onclick=e=>{const b=e.target.closest('button');if(b)setView(b.dataset.v)};
-$('goup').onclick=()=>setView('upload');
 document.querySelector('.brand').onclick=e=>{e.preventDefault();setView('gallery')};
 /* stickers + shutter sound */
 const STK=['🐱','🐶','🐾','❤️','⭐','🎀','🌸','✨'];
@@ -200,13 +243,37 @@ $('undo').onclick=()=>{stickers.pop();drawStrip()};
 function shutter(){try{const a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.type='square';o.frequency.value=1200;g.gain.setValueAtTime(.15,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.12);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.12)}catch(e){}}
 renderSw();renderStk();renderSlots();drawStrip();if(document.fonts)document.fonts.load('700 46px Caveat').then(drawStrip);
 
-/* load: old loose photos and the old "Earlier photos" folder are split into one folder per entry */
-openDB().then(async()=>{folders=await dbAll('f');photos=await dbAll('p');
+/* load: shared when configured, otherwise this device. Old loose photos and the old
+   "Earlier photos" folder are split into one folder per entry. Anything already on this
+   device gets pushed to the shared wall once, so an existing library is not lost. */
+const splitLoose=async()=>{
  const legacy=folders.filter(f=>f.name==='Earlier photos'),ids=new Set(legacy.map(f=>f.id));
  const loose=photos.filter(p=>!p.fid||ids.has(p.fid));
  if(loose.length||legacy.length){const by={};loose.forEach(p=>{const k=p.title+'|'+p.date;(by[k]=by[k]||[]).push(p)});
-  Object.values(by).forEach(a=>{const f={id:uid(),name:a[0].title,date:a[0].date,created:Date.now()};folders.push(f);dbPut('f',f);a.forEach(p=>{p.fid=f.id;dbPut('p',p)})});
-  legacy.forEach(f=>dbDel('f',f.id));folders=folders.filter(f=>!ids.has(f.id))}
- folders.forEach(f=>{if(!f.date){const ps=photos.filter(p=>p.fid===f.id);f.date=ps[0]?ps[0].date:today();dbPut('f',f)}});
- folders.sort((a,b)=>a.created-b.created);renderHome()});
+  for(const a of Object.values(by)){const f={id:uid(),name:a[0].title,date:a[0].date,created:Date.now()};folders.push(f);await saveFolder(f);
+   for(const p of a){p.fid=f.id;if(sb)await sb.from('photos').update({fid:f.id}).eq('id',p.id);else dbPut('p',p)}}
+  for(const f of legacy){if(sb)await sbDel('folders',f.id);else dbDel('f',f.id)}
+  folders=folders.filter(f=>!ids.has(f.id))}
+ for(const f of folders){if(!f.date){const ps=photos.filter(p=>p.fid===f.id);f.date=ps[0]?ps[0].date:today();
+  if(sb)await sb.from('folders').update({date:f.date}).eq('id',f.id);else dbPut('f',f)}}};
+const pushLocal=async()=>{
+ const lf=await dbAll('f'),lp=await dbAll('p');
+ if(!lf.length&&!lp.length)return;
+ $('fhint').textContent='Moving this device library to the shared wall…';
+ const have=new Set(folders.map(f=>f.id));
+ for(const f of lf.filter(f=>!have.has(f.id)))try{await saveFolder(f);folders.push(f)}catch(e){}
+ for(const p of lp){if(!p.src)continue;
+  try{const blob=await (await fetch(p.src)).blob();
+   await savePhoto({id:p.id,fid:p.fid,title:p.title,date:p.date,created:p.created||0},blob);
+   photos.push(Object.assign({},p,{src:objURL(p.fid+'/'+p.id+'.jpg')}))}catch(e){}}};
+async function boot(){
+ if(sb){try{
+   folders=await sbAll('folders');photos=await sbAll('photos');
+   photos.forEach(p=>{if(!p.src&&p.path)p.src=objURL(p.path)});
+   if(localStorage.getItem('jpl-migrated')!=='1'){localStorage.setItem('jpl-migrated','1');await pushLocal()}
+   await splitLoose()}
+  catch(e){say('Shared library could not load: '+e.message)}}
+ else{await openDB();folders=await dbAll('f');photos=await dbAll('p');await splitLoose()}
+ folders.sort((a,b)=>a.created-b.created);fillPick();renderHome()}
 renderHome();
+boot();

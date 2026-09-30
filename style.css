@@ -23,6 +23,8 @@ button{font:inherit;cursor:pointer}
 .btn.go{background:var(--acc);border-color:var(--acc);color:#fff}
 button:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
 .hint{width:100%;text-align:center;color:var(--muted);font-size:.9rem;min-height:1.2em}
+#status{max-width:1000px;margin:0 auto;padding:0 18px;color:var(--acc);font-size:.9rem}
+#status:empty{display:none}
 .back-row{margin-bottom:10px}
 /* header */
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1000px;margin:0 auto;padding:12px 18px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1.5px solid var(--line)}
