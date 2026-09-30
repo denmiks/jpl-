@@ -30,11 +30,28 @@
 <section id="home">
   <div class="hero"><svg class="pet" aria-hidden="true"><use href="#cat2"/></svg><h1>JPL gallery.io</h1><svg class="pet" aria-hidden="true"><use href="#dog3"/></svg></div>
   <p class="sub">Every entry gets its own folder. Open one to browse it.</p>
+ <div id="gfolders">
   <div class="add"><button class="btn go" id="goup">Upload photos</button></div>
   <div class="tabs show" id="htabs" role="group" aria-label="Group folders">
     <button data-h="all" aria-pressed="true">All</button><button data-h="week" aria-pressed="false">Weekly</button><button data-h="month" aria-pressed="false">Monthly</button><button data-h="year" aria-pressed="false">Yearly</button>
   </div>
   <div id="folders"></div>
+ </div>
+ <div id="gview" hidden>
+  <div class="open-head"><button class="btn" id="gclose">← Collapse folder</button><h1 id="gname"></h1><p class="sub" id="gsub">Tap the folder to open or close it.</p></div>
+  <div class="stage"><svg class="pet side" aria-hidden="true"><use href="#cat3"/></svg>
+    <button class="folder" id="folder" aria-expanded="false" aria-label="Open folder">
+      <div class="back"></div>
+      <div class="sheets"><i></i><i></i><i></i></div>
+      <div class="front"><b id="bigname"></b><span id="count">0 photos</span></div>
+    </button><svg class="pet side" aria-hidden="true"><use href="#dog4"/></svg>
+  </div>
+  <div class="hint" id="ghint" aria-live="polite"></div>
+  <div class="tabs" id="tabs" role="group" aria-label="Compilation">
+    <button data-m="week" aria-pressed="true">Weekly</button><button data-m="month" aria-pressed="false">Monthly</button><button data-m="year" aria-pressed="false">Yearly</button>
+  </div>
+  <div class="board" id="board"></div>
+ </div>
 </section>
 
 <section id="upload" hidden>
@@ -47,6 +64,16 @@
     <button class="btn" id="fpick">Choose photos</button>
     <button class="btn go" id="mk">Create folder</button>
     <div class="hint" id="fhint" aria-live="polite"></div>
+  </div>
+  <h2 class="sub2">Add to a folder that already exists</h2>
+  <div class="add">
+    <select id="pfid" aria-label="Folder"></select>
+    <input type="text" id="ptitle" placeholder="Photo title (e.g. Sunset)" maxlength="40" aria-label="Photo title">
+    <input type="date" id="pdate" aria-label="Photo date">
+    <input type="file" id="pfile" accept="image/*" multiple hidden>
+    <button class="btn" id="ppick">Choose photos</button>
+    <button class="btn go" id="padd">Add to folder</button>
+    <div class="hint" id="phint" aria-live="polite"></div>
   </div>
 </section>
 
@@ -76,32 +103,6 @@
   </div>
 </section>
 
-<section id="detail" hidden>
-  <div class="back-row"><button class="btn" id="back">← Gallery</button></div>
-  <h1 id="ftitle"></h1>
-  <p class="sub">Add a photo, give it a title, then open the folder.</p>
-  <div class="add">
-    <input type="text" id="title" placeholder="Photo title (e.g. Sunset)" maxlength="40" aria-label="Photo title">
-    <input type="date" id="date" aria-label="Photo date">
-    <input type="file" id="file" accept="image/*" multiple hidden>
-    <button class="btn" id="pick">Choose photos</button>
-    <button class="btn go" id="save">Add to folder</button>
-    <div class="hint" id="hint" aria-live="polite"></div>
-  </div>
-  <div class="stage"><svg class="pet side" aria-hidden="true"><use href="#cat3"/></svg>
-    <button class="folder" id="folder" aria-expanded="false" aria-label="Open folder">
-      <div class="back"></div>
-      <div class="sheets"><i></i><i></i><i></i></div>
-      <div class="front"><b id="bigname"></b><span id="count">0 photos</span></div>
-    </button><svg class="pet side" aria-hidden="true"><use href="#dog4"/></svg>
-  </div>
-  <div class="tabs" id="tabs" role="group" aria-label="Compilation">
-    <button data-m="week" aria-pressed="true">Weekly</button>
-    <button data-m="month" aria-pressed="false">Monthly</button>
-    <button data-m="year" aria-pressed="false">Yearly</button>
-  </div>
-  <div class="board" id="board"></div>
-</section>
 </main>
 
 <script src="app.js"></script>

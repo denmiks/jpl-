@@ -13,6 +13,11 @@ h1{font-family:Caveat,cursive;font-size:clamp(2.2rem,7vw,3.4rem);margin:0;text-a
 .add{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:34px}
 .add input[type=text],.add input[type=date]{font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:#2f2a25;min-width:0}
 .add input[type=text]{flex:1 1 200px;max-width:280px}
+.add select{font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:#2f2a25;max-width:280px}
+.open-head{text-align:center;margin-bottom:14px}
+.open-head .btn{margin-bottom:12px}
+.open-head .sub{margin-bottom:22px}
+.sub2{text-align:center;font-family:Caveat,cursive;font-size:1.7rem;font-weight:700;color:var(--ink);margin:0 0 12px}
 button{font:inherit;cursor:pointer}
 .btn{padding:10px 16px;border-radius:10px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);font-weight:700}
 .btn.go{background:var(--acc);border-color:var(--acc);color:#fff}

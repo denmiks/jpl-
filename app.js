@@ -2,7 +2,7 @@ const $=id=>document.getElementById(id);
 let hm='all',folders=[],photos=[],cur=null,mode='week',isOpen=false,pending=[],db=null;
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const uid=()=>Date.now()+'-'+Math.random().toString(36).slice(2,7);
-$('date').value=today();$('fdate').value=today();
+$('pdate').value=today();$('fdate').value=today();
 const plural=n=>n+' photo'+(n===1?'':'s');
 const inCur=()=>photos.filter(p=>p.fid===cur);
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -38,7 +38,10 @@ function renderHome(){
  if(!folders.length){$('folders').innerHTML='<p class="empty">No folders yet. Press Upload photos to make one.</p>';return}
  const g={};folders.forEach(f=>{const[k,l]=hm==='all'?[0,'']:keyOf(f.date,hm);(g[k]=g[k]||{l,a:[]}).a.push(f)});
  $('folders').innerHTML=Object.keys(g).sort((a,b)=>b-a).map(k=>{const x=g[k];
-  return `<section class="group">${x.l?`<h2>${esc(x.l)}<small>${x.a.length} folder${x.a.length>1?'s':''}</small></h2>`:''}<div class="folders">${x.a.sort((a,b)=>b.created-a.created).map(card).join('')}</div></section>`}).join('')}
+  return `<section class="group">${x.l?`<h2>${esc(x.l)}<small>${x.a.length} folder${x.a.length>1?'s':''}</small></h2>`:''}<div class="folders">${x.a.sort((a,b)=>b.created-a.created).map(card).join('')}</div></section>`}).join('');fillPick()}
+function fillPick(){const s=$('pfid'),v=s.value;
+ s.innerHTML='<option value="">Choose a folder</option>'+folders.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+ if(folders.some(f=>f.id===v))s.value=v}
 document.querySelectorAll('#htabs button').forEach(b=>b.onclick=()=>{hm=b.dataset.h;document.querySelectorAll('#htabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderHome()});
 let fpend=[];
 $('fpick').onclick=()=>$('ffile').click();
@@ -58,27 +61,35 @@ $('folders').onclick=e=>{
   folders=folders.filter(f=>f.id!==id);dbDel('f',id);renderHome();return}
  const b=e.target.closest('.folder');if(b)show(b.dataset.id)};
 
-/* navigation */
+/* opening a folder inside the gallery */
 function show(id){
  cur=id;const f=folders.find(x=>x.id===id);
- $('home').hidden=true;$('upload').hidden=true;$('booth').hidden=true;$('detail').hidden=false;markNav('gallery');
- $('ftitle').textContent=f.name;$('bigname').textContent=f.name;$('hint').textContent='';
+ if($('home').hidden)setView('gallery');
+ $('gfolders').hidden=true;$('gview').hidden=false;
+ $('gname').textContent=f.name;$('bigname').textContent=f.name;$('ghint').textContent='';
  isOpen=false;$('folder').classList.remove('open');$('tabs').classList.remove('show');$('board').classList.remove('show');
  render();window.scrollTo(0,0);
  if(inCur().length)setTimeout(()=>{if(cur===id&&!isOpen)setOpen(true)},500)}
-$('back').onclick=()=>{cur=null;isOpen=false;setView('gallery')};
+function closeFolder(){
+ cur=null;isOpen=false;$('gview').hidden=true;$('gfolders').hidden=false;
+ document.querySelectorAll('.pol').forEach(c=>{c.style.transitionDelay='0ms';c.classList.remove('in')});
+ renderHome();window.scrollTo(0,0)}
+$('gclose').onclick=closeFolder;
 
-/* adding photos to an open folder */
-$('pick').onclick=()=>$('file').click();
-$('file').onchange=e=>{pending=[...e.target.files];$('hint').textContent=pending.length?plural(pending.length)+' ready. Add a title, then press Add to folder.':''};
-$('save').onclick=async()=>{
- if(!pending.length){$('hint').textContent='Choose at least one photo first.';return}
- const t=$('title').value.trim(),d=$('date').value||today();let n=0;
+/* adding photos to an existing folder, from the upload tab */
+$('ppick').onclick=()=>$('pfile').click();
+$('pfile').onchange=e=>{pending=[...e.target.files];$('phint').textContent=pending.length?plural(pending.length)+' ready. Add a title, then press Add to folder.':''};
+$('padd').onclick=async()=>{
+ const fid=$('pfid').value;
+ if(!fid){$('phint').textContent='Pick a folder to add to first.';return}
+ if(!pending.length){$('phint').textContent='Choose at least one photo first.';return}
+ const t=$('ptitle').value.trim(),d=$('pdate').value||today();let n=0;
  for(const f of pending){const src=await shrink(f);if(!src)continue;
-  const p={id:uid(),fid:cur,title:t||f.name.replace(/\.[^.]+$/,''),date:d,src};photos.push(p);dbPut('p',p);n++}
- pending=[];$('file').value='';$('title').value='';
- $('hint').textContent=n?n+' added to this folder.':'Those files could not be read as images.';
- update()};
+  const p={id:uid(),fid,title:t||f.name.replace(/\.[^.]+$/,''),date:d,src};photos.push(p);dbPut('p',p);n++}
+ pending=[];$('pfile').value='';$('ptitle').value='';
+ $('phint').textContent=n?n+' added.':'Those files could not be read as images.';
+ if(cur===fid)update();
+ renderHome();fillPick()};
 
 /* polaroid board */
 function render(){
@@ -99,7 +110,7 @@ function spread(){
  cards.forEach(c=>{c.style.transition='';c.classList.add('in')})}
 function update(){render();if(isOpen)requestAnimationFrame(spread)}
 function setOpen(v){
- if(v&&!inCur().length){const f=$('folder');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');$('hint').textContent='The folder is empty. Add a photo first.';return}
+ if(v&&!inCur().length){const f=$('folder');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');$('ghint').textContent='This folder is empty. Add photos from the Upload tab.';return}
  isOpen=v;$('folder').classList.toggle('open',v);$('folder').setAttribute('aria-expanded',v);
  $('folder').setAttribute('aria-label',v?'Close folder':'Open folder');$('tabs').classList.toggle('show',v);
  if(v){$('board').classList.add('show');render();requestAnimationFrame(()=>{spread();$('tabs').scrollIntoView({behavior:'smooth',block:'start'})})}
@@ -171,7 +182,7 @@ $('dl').onclick=async()=>{
 /* section nav */
 function setView(v){
  $('home').hidden=v!=='gallery';$('upload').hidden=v!=='upload';$('booth').hidden=v!=='booth';
- if(!$('detail').hidden){cur=null;isOpen=false;$('detail').hidden=true}
+ if(v!=='gallery'&&cur)closeFolder();
  if(v!=='booth')stopCam();
  if(v==='gallery')renderHome();
  if(v==='booth')drawStrip();
