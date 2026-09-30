@@ -82,16 +82,18 @@ $('ffile').onchange=e=>{fpend=[...e.target.files];$('fhint').textContent=fpend.l
 $('mk').onclick=async()=>{const n=$('fname').value.trim();
  if(!n){$('fhint').textContent='Type a title for this entry first.';return}
  if(!fpend.length){$('fhint').textContent='Choose at least one photo first.';return}
- const d=$('fdate').value||today(),f={id:uid(),name:n,date:d,created:Date.now()};
- const made=[];let bad=null;
- for(const file of fpend){const blob=await shrink(file);if(!blob)continue;
-  const p={id:uid(),fid:f.id,title:n,date:d,created:Date.now()};
-  try{photos.push(await savePhoto(p,blob));made.push(p);}catch(e){bad=e}}
- if(!made.length){$('fhint').textContent=bad?'Upload failed: '+bad.message:'Those files could not be read as images.';return}
- folders.push(f);
- try{await saveFolder(f)}
- catch(e){await Promise.all(made.map(p=>dropPhoto(p)));photos=photos.filter(p=>p.fid!==f.id);
-  $('fhint').textContent='Could not create the folder: '+e.message;return}
+const d=$('fdate').value||today(),f={id:uid(),name:n,date:d,created:Date.now()};
+  let bad=null;
+  try{await saveFolder(f)}
+  catch(e){$('fhint').textContent='Could not create the folder: '+e.message;return}
+  folders.push(f);
+  const made=[];
+  for(const file of fpend){const blob=await shrink(file);if(!blob)continue;
+   const p={id:uid(),fid:f.id,title:n,date:d,created:Date.now()};
+   try{photos.push(await savePhoto(p,blob));made.push(p);}catch(e){bad=e}}
+  if(!made.length){
+   await dropFolder(f);folders=folders.filter(x=>x.id!==f.id);photos=photos.filter(p=>p.fid!==f.id);
+   $('fhint').textContent=bad?'Upload failed: '+bad.message:'Those files could not be read as images.';return}
  fpend=[];$('ffile').value='';$('fname').value='';$('fhint').textContent='';renderHome();show(f.id)};
 $('fname').onkeydown=e=>{if(e.key==='Enter')$('mk').click()};
 $('folders').onclick=async e=>{
