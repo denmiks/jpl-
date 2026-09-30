@@ -23,6 +23,11 @@ create index if not exists photos_fid on public.photos(fid);
 alter table public.folders enable row level security;
 alter table public.photos  enable row level security;
 
+-- the Data API only exposes these tables to anon/authenticated if they are granted
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on public.folders to anon, authenticated;
+grant select, insert, update, delete on public.photos  to anon, authenticated;
+
 drop policy if exists "read folders"   on public.folders;
 drop policy if exists "add folders"    on public.folders;
 drop policy if exists "edit folders"   on public.folders;
@@ -31,14 +36,14 @@ drop policy if exists "read photos"    on public.photos;
 drop policy if exists "add photos"     on public.photos;
 drop policy if exists "kill photos"    on public.photos;
 
-create policy "read folders" on public.folders for select using (true);
-create policy "add folders"  on public.folders for insert with check (true);
-create policy "edit folders" on public.folders for update using (true);
-create policy "kill folders" on public.folders for delete using (true);
+create policy "read folders" on public.folders for select to anon, authenticated using (true);
+create policy "add folders"  on public.folders for insert to anon, authenticated with check (true);
+create policy "edit folders" on public.folders for update to anon, authenticated using (true) with check (true);
+create policy "kill folders" on public.folders for delete to anon, authenticated using (true);
 
-create policy "read photos" on public.photos for select using (true);
-create policy "add photos"  on public.photos for insert with check (true);
-create policy "kill photos" on public.photos for delete using (true);
+create policy "read photos" on public.photos for select to anon, authenticated using (true);
+create policy "add photos"  on public.photos for insert to anon, authenticated with check (true);
+create policy "kill photos" on public.photos for delete to anon, authenticated using (true);
 
 -- public bucket: everyone can see the images, anyone can add or remove them
 insert into storage.buckets (id, name, public)
@@ -49,6 +54,6 @@ drop policy if exists "read photos files"  on storage.objects;
 drop policy if exists "add photos files"  on storage.objects;
 drop policy if exists "kill photos files" on storage.objects;
 
-create policy "read photos files" on storage.objects for select using (bucket_id = 'photos');
-create policy "add photos files"  on storage.objects for insert with check (bucket_id = 'photos');
-create policy "kill photos files" on storage.objects for delete using (bucket_id = 'photos');
+create policy "read photos files" on storage.objects for select to anon, authenticated using (bucket_id = 'photos');
+create policy "add photos files"  on storage.objects for insert to anon, authenticated with check (bucket_id = 'photos');
+create policy "kill photos files" on storage.objects for delete to anon, authenticated using (bucket_id = 'photos');

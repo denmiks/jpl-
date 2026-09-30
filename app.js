@@ -10,8 +10,8 @@ const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7);
 const say=m=>{const s=$('status');if(s)s.textContent=m||''};
 
 /* storage: shared Supabase when configured, IndexedDB as the offline fallback */
-const SB={url:'PASTE_SUPABASE_URL',key:'PASTE_SUPABASE_ANON_KEY',bucket:'photos'};
-const sb=(SB.url.startsWith('PASTE')||typeof supabase==='undefined')?null:supabase.createClient(SB.url,SB.key);
+const SB={url:'https://vhcjsuwssdmbrryucwws.supabase.co',key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoY2pzdXdzc2RtYnJyeXVjd3dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3OTUyNDYsImV4cCI6MjEwNjM3MTI0Nn0.w-fO0dEBXBfsUpcua_8iiNE6T1Wvy24A-LTdOQQ0XGs',bucket:'photos'};
+const sb=(/^PASTE_/.test(SB.url)||typeof supabase==='undefined')?null:supabase.createClient(SB.url,SB.key);
 const sbAll=async t=>{const r=await sb.from(t).select('*');if(r.error)throw r.error;return r.data||[]};
 const sbDel=(t,id)=>sb.from(t).delete().eq('id',id);
 const sbRm=paths=>sb.storage.from(SB.bucket).remove(paths).then(()=>{});

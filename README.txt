@@ -23,16 +23,20 @@ Until you fill in SB, everything is stored in the browser on that one device.
 To make it shared, so that anyone who opens the site sees everyone else's photos:
 
 1. Create a free project at https://supabase.com (no card needed)
-2. Open SQL editor, paste in supabase.sql, Run
-3. Storage -> Buckets -> make sure a bucket named "photos" exists and is public
-   (the sql already creates it, so this is just to check)
-4. Project Settings -> API -> copy Project URL and the "anon" public key
-5. In app.js, edit the first line to look like:
+2. Open SQL Editor (left sidebar, near the top), New query, paste in supabase.sql, Run
+3. Settings -> API Keys -> copy the Project URL and the publishable key
+   (it starts sb_publishable_. If you only see the old "anon" key, that one works too)
+4. In app.js, edit the first line to look like:
 
-     const SB={url:'https://YOURPROJECT.supabase.co',key:'YOUR_ANON_KEY',bucket:'photos'};
+     const SB={url:'https://YOURPROJECT.supabase.co',key:'sb_publishable_...',bucket:'photos'};
 
-6. Reload the page. The first time it loads, anything already on this device is
+5. Reload the page. The first time it loads, anything already on this device is
    pushed up to the shared wall, once.
+
+Check it worked: Table Editor should list folders and photos, and Storage ->
+Buckets should list a public bucket named "photos". If the gallery says
+"Shared library could not load" then the URL or key is wrong, or supabase.sql
+was not run.
 
 Notes
 -----
